@@ -33,15 +33,21 @@ module "blog_vpc" {
 
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  version = "6.5.2"
+  version = "~> 9.0"
 
   name = "blog"
 
   min_size            = 1
   max_size            = 2
   vpc_zone_identifier = module.blog_vpc.public_subnets
-  target_group_arns   = [aws_lb_target_group.blog.arn]
   security_groups     = [module.blog_sg.security_group_id]
+
+  traffic_source_attachments = {
+    blog-alb = {
+      traffic_source_identifier = aws_lb_target_group.blog.arn
+      traffic_source_type       = "elbv2"
+    }
+  }
 
   instance_type = var.instance_type
   image_id      = data.aws_ami.app_ami.id
