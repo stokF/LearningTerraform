@@ -20,25 +20,33 @@ module "blog_vpc" {
   name = "dev"
   cidr = "10.0.0.0/16"
 
-  azs             = ["ap-southeast-4a", "ap-southeast-4b", "ap-southeast-4c"]
+  azs             = ["us-west-2a", "us-west-2b", "us-west-2c"]
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
-  map_public_ip_on_launch     = true
-  
+  map_public_ip_on_launch = true
+
   tags = {
     Terraform = "true"
     Environment = "dev"
   }
 }
 
-resource "aws_instance" "blog" {
-  ami                    = data.aws_ami.app_ami.id
-  instance_type          = var.instance_type
-  subnet_id              = module.blog_vpc.public_subnets[0]
-  associate_public_ip_address = true
-  vpc_security_group_ids = [module.blog_sg.security_group_id]
+module "blog_autoscaling" {
+  source  = "terraform-aws-modules/autoscaling/aws"
+  version = "6.5.2"
 
-  user_data = <<-USERDATA
+  name = "blog"
+
+  min_size            = 1
+  max_size            = 2
+  vpc_zone_identifier = module.blog_vpc.public_subnets
+  target_group_arns   = [aws_lb_target_group.blog.arn]
+  security_groups     = [module.blog_sg.security_group_id]
+
+  instance_type = var.instance_type
+  image_id      = data.aws_ami.app_ami.id
+
+  user_data = base64encode(<<-USERDATA
   #!/bin/bash
   dnf install -y java-17-amazon-corretto-headless
   curl -fsSL https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.87/bin/apache-tomcat-9.0.87.tar.gz -o /opt/tomcat.tar.gz
@@ -47,10 +55,7 @@ resource "aws_instance" "blog" {
   sed -i 's/port="8080"/port="80"/' /opt/tomcat/conf/server.xml
   /opt/tomcat/bin/startup.sh
   USERDATA
-
-  tags = {
-    Name = "Learning Terraform"
-  }
+  )
 }
 
 module "blog_sg" {
@@ -94,10 +99,4 @@ resource "aws_lb_target_group" "blog" {
   port     = 80
   protocol = "HTTP"
   vpc_id   = module.blog_vpc.vpc_id
-}
-
-resource "aws_lb_target_group_attachment" "blog" {
-  target_group_arn = aws_lb_target_group.blog.arn
-  target_id        = aws_instance.blog.id
-  port             = 80
 }
