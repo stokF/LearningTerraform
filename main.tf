@@ -36,12 +36,15 @@ resource "aws_instance" "blog" {
   subnet_id              = module.blog_vpc.public_subnets[0]
   vpc_security_group_ids = [module.blog_sg.security_group_id]
 
-  user_data = <<-EOF
-    #!/bin/bash
-    dnf install -y httpd
-    echo "<h1>Hello from Terraform</h1>" > /var/www/html/index.html
-    systemctl enable --now httpd
-    EOF
+  user_data = <<-USERDATA
+  #!/bin/bash
+  dnf install -y java-17-amazon-corretto-headless
+  curl -fsSL https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.87/bin/apache-tomcat-9.0.87.tar.gz -o /opt/tomcat.tar.gz
+  mkdir -p /opt/tomcat
+  tar xzf /opt/tomcat.tar.gz -C /opt/tomcat --strip-components=1
+  sed -i 's/port="8080"/port="80"/' /opt/tomcat/conf/server.xml
+  /opt/tomcat/bin/startup.sh
+  USERDATA
 
   tags = {
     Name = "Learning Terraform"
