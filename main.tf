@@ -36,6 +36,13 @@ resource "aws_instance" "blog" {
   subnet_id              = module.blog_vpc.public_subnets[0]
   vpc_security_group_ids = [module.blog_sg.security_group_id]
 
+  user_data = <<-EOF
+    #!/bin/bash
+    dnf install -y httpd
+    echo "<h1>Hello from Terraform</h1>" > /var/www/html/index.html
+    systemctl enable --now httpd
+    EOF
+
   tags = {
     Name = "Learning Terraform"
   }
