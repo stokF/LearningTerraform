@@ -43,7 +43,7 @@ module "blog_autoscaling" {
   security_groups     = [module.blog_sg.security_group_id]
 
   traffic_source_attachments = {
-    ${var.environment.name}-blog-alb = {
+    blog-alb = {
       traffic_source_identifier = aws_lb_target_group.blog.arn
       traffic_source_type       = "elbv2"
     }
