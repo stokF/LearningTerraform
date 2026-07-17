@@ -35,7 +35,7 @@ module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "~> 9.0"
 
-  name = "blog"
+  name = "${var.environment.name}-blog"
 
   min_size            = var.asg_min
   max_size            = var.asg_max
@@ -43,7 +43,7 @@ module "blog_autoscaling" {
   security_groups     = [module.blog_sg.security_group_id]
 
   traffic_source_attachments = {
-    blog-alb = {
+    ${var.environment.name}-blog-alb = {
       traffic_source_identifier = aws_lb_target_group.blog.arn
       traffic_source_type       = "elbv2"
     }
@@ -69,7 +69,7 @@ module "blog_sg" {
   version = "4.13.0"
 
   vpc_id  = module.blog_vpc.vpc_id
-  name    = "blog"
+  name    = "${var.environment.name}-blog"
   ingress_rules = ["https-443-tcp","http-80-tcp"]
   ingress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules = ["all-all"]
@@ -79,7 +79,7 @@ module "blog_sg" {
 module "blog_alb" {
   source = "terraform-aws-modules/alb/aws"
 
-  name    = "blog-alb"
+  name    = "${var.environment.name}-blog-alb"
   vpc_id  = module.blog_vpc.vpc_id
   subnets = module.blog_vpc.public_subnets
 
@@ -101,7 +101,7 @@ module "blog_alb" {
 }
 
 resource "aws_lb_target_group" "blog" {
-  name     = "blog"
+  name     = "${var.environment.name}-blog"
   port     = 80
   protocol = "HTTP"
   vpc_id   = module.blog_vpc.vpc_id
